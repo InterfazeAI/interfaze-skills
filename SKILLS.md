@@ -51,7 +51,7 @@ const interfaze = createOpenAI({
 });
 ```
 
-Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`.
+Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`.
 
 ### TypeScript — LangChain SDK
 
@@ -398,12 +398,11 @@ console.log(result);
 
 ```ts
 import { generateText, Output } from "ai";
-import { z } from "zod";
 
 const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>ocr</task>",
-  output: Output.object({ schema: z.any() }),
+  output: Output.json(),
   messages: [
     {
       role: "user",
@@ -771,12 +770,11 @@ console.log(result);
 
 ```ts
 import { generateText, Output } from "ai";
-import { z } from "zod";
 
 const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>speech_to_text</task>",
-  output: Output.object({ schema: z.any() }),
+  output: Output.json(),
   prompt: "Transcribe the audio file https://example.com/audio.mp3",
 });
 
@@ -1431,12 +1429,11 @@ console.log(result);
 
 ```ts
 import { generateText, Output } from "ai";
-import { z } from "zod";
 
 const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>object_detection</task>",
-  output: Output.object({ schema: z.any() }),
+  output: Output.json(),
   messages: [
     {
       role: "user",
@@ -1790,12 +1787,11 @@ console.log("Web Search Results:", result);
 
 ```ts
 import { generateText, Output } from "ai";
-import { z } from "zod";
 
 const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>web_search</task>",
-  output: Output.object({ schema: z.any() }),
+  output: Output.json(),
   prompt: "GLP-1 research paper",
 });
 
@@ -2082,12 +2078,11 @@ console.log("Web Scrape Results:", result);
 
 ```ts
 import { generateText, Output } from "ai";
-import { z } from "zod";
 
 const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>scraper</task>",
-  output: Output.object({ schema: z.any() }),
+  output: Output.json(),
   prompt: "Extract post titles and points from https://news.ycombinator.com",
 });
 

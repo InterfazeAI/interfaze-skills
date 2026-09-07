@@ -71,7 +71,7 @@ const interfaze = createOpenAI({
 });
 ```
 
-Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`.
+Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`.
 
 ### TypeScript — LangChain SDK
 
@@ -413,12 +413,11 @@ console.log(result);
 
 ```ts
 import { generateText, Output } from "ai";
-import { z } from "zod";
 
 const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>object_detection</task>",
-  output: Output.object({ schema: z.any() }),
+  output: Output.json(),
   messages: [
     {
       role: "user",

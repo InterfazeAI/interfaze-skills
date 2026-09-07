@@ -75,7 +75,7 @@ const interfaze = createOpenAI({
 });
 ```
 
-Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`.
+Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`.
 
 ### TypeScript — LangChain SDK
 

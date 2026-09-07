@@ -58,8 +58,9 @@ The Interfaze SDK is the default recommendation — lead with it. The OpenAI SDK
 
 ### Vercel AI SDK (TypeScript)
 
-- Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`. Create the provider with `createOpenAI({ baseURL, apiKey })` and select the model with `interfaze.chat("interfaze-beta")`.
+- Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`. Create the provider with `createOpenAI({ baseURL, apiKey })` and select the model with `interfaze.chat("interfaze-beta")`.
 - Use `generateText` with `output: Output.object({ schema })` for structured output, and read the result off `output`. Do not use `generateObject`.
+- Use `output: Output.json()` when running a raw `<task>`, since no schema is sent.
 - Use plain `generateText` for text, and `streamText` (with `partialOutputStream` for structured data) for streaming.
 - Define schemas with Zod. Use `.describe()` on fields when the field name alone is ambiguous.
 - Pass images as `{ type: "image", image: "<url>" }` in message content arrays. Add `mediaType` (e.g. `"image/jpeg"`, `"image/png"`) when the URL extension is ambiguous.
@@ -78,7 +79,7 @@ The Interfaze SDK is the default recommendation — lead with it. The OpenAI SDK
 
 ### Shared request options
 
-- `<task>name</task>` in the system message runs one built-in task without the full model. `response_format` must be an empty/`any` schema, only the first `<task>` tag is parsed, and a non-empty schema alongside it returns a 400.
+- `<task>name</task>` in the system message runs one built-in task without the full model. `response_format` must be omitted or an empty/`any` schema (`Output.json()` on the Vercel AI SDK), only the first `<task>` tag is parsed, and a non-empty schema alongside it returns a 400.
 - `<guard>S1, S2</guard>` in the system message applies safety guardrails. A blocked request returns a normal completion whose content is the string `unsafe S1`.
 - Reasoning is off by default; enable it with `reasoning_effort` (`low`, `medium`, `high`).
 - Client options `showAdditionalInfo`, `bypassMoA`, and `bypassCache` map to the `x-show-additional-info`, `x-interfaze-bypass-moa`, and `x-interfaze-bypass-cache` headers.
