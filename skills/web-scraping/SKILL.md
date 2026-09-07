@@ -36,18 +36,27 @@ Extract structured data from web pages by including a URL in the prompt and defi
 
 ## Setup
 
-### TypeScript — OpenAI SDK
+Every SDK reads the API key from `INTERFAZE_API_KEY`.
 
-```ts
-import OpenAI from "openai";
+### TypeScript — Interfaze SDK
 
-const interfaze = new OpenAI({
-  baseURL: "https://api.interfaze.ai/v1",
-  apiKey: process.env.INTERFAZE_API_KEY,
-});
+```bash
+npm install interfaze
 ```
 
+```ts
+import { Interfaze } from "interfaze";
+
+const interfaze = new Interfaze();
+```
+
+No base URL or model name to configure — both are built in.
+
 ### TypeScript — Vercel AI SDK
+
+```bash
+npm install ai @ai-sdk/openai
+```
 
 ```ts
 import { createOpenAI } from "@ai-sdk/openai";
@@ -58,19 +67,57 @@ const interfaze = createOpenAI({
 });
 ```
 
+Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`.
+
 ### TypeScript — LangChain SDK
 
-```ts
-import { ChatOpenAI } from "@langchain/openai";
-
-const interfaze = new ChatOpenAI({
-  configuration: { baseURL: "https://api.interfaze.ai/v1" },
-  apiKey: process.env.INTERFAZE_API_KEY,
-  model: "interfaze-beta",
-});
+```bash
+npm install @interfaze-ai/langchain
 ```
 
-### Python — OpenAI SDK
+```ts
+import { ChatInterfaze } from "@interfaze-ai/langchain";
+
+const interfaze = new ChatInterfaze({ apiKey: process.env.INTERFAZE_API_KEY });
+```
+
+### Python — Interfaze SDK
+
+```bash
+pip install interfaze
+```
+
+```python
+from interfaze import Interfaze
+
+interfaze = Interfaze()
+```
+
+### Python — LangChain SDK
+
+```bash
+pip install interfaze-langchain
+```
+
+```python
+import os
+from interfaze_langchain import ChatInterfaze
+
+interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
+```
+
+### Already using the OpenAI SDK?
+
+Point an existing OpenAI client at Interfaze and pass `model: "interfaze-beta"` on every call.
+
+```ts
+import OpenAI from "openai";
+
+const interfaze = new OpenAI({
+  baseURL: "https://api.interfaze.ai/v1",
+  apiKey: process.env.INTERFAZE_API_KEY,
+});
+```
 
 ```python
 from openai import OpenAI
@@ -78,23 +125,15 @@ from openai import OpenAI
 interfaze = OpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>")
 ```
 
-### Python — LangChain SDK
-
-```python
-from langchain_openai import ChatOpenAI
-
-interfaze = ChatOpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>", model="interfaze-beta")
-```
-
 ## Example: scrape product listings
 
 The URL goes inline in the prompt — there is no separate URL parameter.
 
-### TypeScript — OpenAI SDK
+### TypeScript — Interfaze SDK
 
 ```ts
+import { responseFormat } from "interfaze";
 import { z } from "zod";
-import { zodResponseFormat } from "openai/helpers/zod";
 
 const ProductSchema = z.object({
   price: z.number(),
@@ -102,23 +141,23 @@ const ProductSchema = z.object({
 });
 
 const response = await interfaze.chat.completions.create({
-  model: "interfaze-beta",
   messages: [
     {
       role: "user",
       content: "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL",
     },
   ],
-  response_format: zodResponseFormat(ProductSchema, "product_schema"),
+  response_format: responseFormat(z.toJSONSchema(ProductSchema), "product_schema"),
 });
 
-console.log(response.choices[0].message.content);
+console.log(JSON.parse(response.choices[0]?.message.content ?? "{}"));
+console.log("Web Scrape Results:", response.precontext?.[0]?.result);
 ```
 
 ### TypeScript — Vercel AI SDK
 
 ```ts
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 
 const ProductSchema = z.object({
@@ -126,11 +165,16 @@ const ProductSchema = z.object({
   listing_name: z.string(),
 });
 
-const { object } = await generateObject({
+const { output, response } = await generateText({
   model: interfaze.chat("interfaze-beta"),
-  schema: ProductSchema,
+  output: Output.object({ schema: ProductSchema }),
   prompt: "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL",
 });
+
+console.log(output);
+
+// @ts-expect-error precontext is not typed
+console.log("Web Scrape Results:", response.body?.precontext?.[0]?.result);
 ```
 
 ### TypeScript — LangChain SDK
@@ -143,14 +187,17 @@ const ProductSchema = z.object({
   listing_name: z.string(),
 });
 
-const structuredModel = interfaze.withStructuredOutput(ProductSchema);
+const structuredModel = interfaze.withStructuredOutput(ProductSchema, { includeRaw: true });
 
 const response = await structuredModel.invoke(
   "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL"
 );
+
+console.log(response.parsed);
+console.log("Web Scrape Results:", response.raw.response_metadata.precontext?.[0]?.result);
 ```
 
-### Python — OpenAI SDK
+### Python — Interfaze SDK
 
 ```python
 from pydantic import BaseModel
@@ -159,18 +206,18 @@ class ProductSchema(BaseModel):
     price: float
     listing_name: str
 
-response = interfaze.chat.completions.create(
-    model="interfaze-beta",
+response = interfaze.chat.completions.parse(
     messages=[
-        {"role": "user", "content": "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL"},
+        {
+            "role": "user",
+            "content": "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL",
+        }
     ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": {"name": "product_schema", "schema": ProductSchema.model_json_schema()},
-    },
+    response_format=ProductSchema,
 )
 
-print(response.choices[0].message.content)
+print(response.choices[0].message.parsed)
+print("Web Scrape Results:", response.precontext[0].result if response.precontext else None)
 ```
 
 ### Python — LangChain SDK
@@ -182,16 +229,19 @@ class ProductSchema(BaseModel):
     price: float
     listing_name: str
 
-structured_llm = interfaze.with_structured_output(ProductSchema)
+structured_llm = interfaze.with_structured_output(ProductSchema, include_raw=True)
 
 response = structured_llm.invoke(
     "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL"
 )
+
+print(response["parsed"])
+print("Web Scrape Results:", response["raw"].response_metadata.get("precontext"))
 ```
 
 ## Example: scrape a social profile
 
-Same call — swap in the schema:
+Same call — swap in the schema.
 
 ```ts
 const LinkedInProfileSchema = z.object({
@@ -216,102 +266,121 @@ class LinkedInProfileSchema(BaseModel):
 
 ## Example: scrape an array of listings
 
-Use an array at the top level to extract many items:
+Wrap the list in an object — a non-object schema root gets wrapped under a `result` key.
 
 ```ts
-const { object } = await generateObject({
-  model: interfaze.chat("interfaze-beta"),
-  schema: z.array(
+const ArticlesSchema = z.object({
+  articles: z.array(
     z.object({
       title: z.string(),
       url: z.string(),
       points: z.number().nullable(),
     })
   ),
-  prompt: "Extract all article titles, URLs, and points from https://news.ycombinator.com",
 });
+// prompt: "Extract all article titles, URLs, and points from https://news.ycombinator.com"
+```
+```python
+class Article(BaseModel):
+    title: str
+    url: str
+    points: Optional[int] = None
+
+class ArticlesSchema(BaseModel):
+    articles: list[Article]
 ```
 
 ## Tips
 
 - Pass the URL inline in the prompt. No separate URL parameter is needed.
 - Be specific: "get all product names and prices" works better than "scrape this page".
-- Use `z.array(...)` / `List[...]` at the top level when extracting lists.
 - Use `.describe()` / `Field(description=...)` for ambiguous field names.
 - Residential proxies, browser infrastructure, and bot-block handling are built in — no extra setup.
+- The scraped page content lands in `precontext` under `scraped_content`, `scraped_elements`, and `meta`, including the CSS selectors used for each field. Use it to debug a field the model got wrong.
 
 ## Advanced: raw scraping output
 
-For maximum speed and lowest cost without a custom schema, set `<task>scraper</task>` in the system message — the model fetches the page and returns scraped content in a fixed structure on `precontext`.
+Run the scraper on its own to skip the model's extraction pass and get the page content in a fixed shape. Faster and cheaper when you don't need a custom schema.
 
-### TypeScript — OpenAI SDK
+### TypeScript — Interfaze SDK
 
 ```ts
-const response = await interfaze.chat.completions.create({
-  model: "interfaze-beta",
-  messages: [
-    { role: "system", content: "<task>scraper</task>" },
-    { role: "user", content: "Extract post titles and points from https://news.ycombinator.com" },
-  ],
-  response_format: zodResponseFormat(z.any(), "scraper_schema"),
-});
+const result = await interfaze.tasks.scrape("https://news.ycombinator.com");
+
+console.log("Web Scrape Results:", result);
 ```
 
 ### TypeScript — Vercel AI SDK
 
 ```ts
-const { object } = await generateObject({
+import { generateText, Output } from "ai";
+import { z } from "zod";
+
+const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>scraper</task>",
-  schema: z.any(),
-  messages: [
-    { role: "user", content: "Extract post titles and points from https://news.ycombinator.com" },
-  ],
+  output: Output.object({ schema: z.any() }),
+  prompt: "Extract post titles and points from https://news.ycombinator.com",
 });
+
+console.log(output);
 ```
 
 ### TypeScript — LangChain SDK
 
 ```ts
-const structuredModel = interfaze.withStructuredOutput({});
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 
-const response = await structuredModel.invoke([
-  { role: "system", content: "<task>scraper</task>" },
-  { role: "user", content: "Extract post titles and points from https://news.ycombinator.com" },
+const response = await interfaze.invoke([
+  new SystemMessage("<task>scraper</task>"),
+  new HumanMessage("Extract post titles and points from https://news.ycombinator.com"),
 ]);
+
+const { result } = JSON.parse(response.content as string);
+console.log("Web Scrape Results:", result);
 ```
 
-### Python — OpenAI SDK
+### Python — Interfaze SDK
 
 ```python
-response = interfaze.chat.completions.create(
-    model="interfaze-beta",
-    messages=[
-        {"role": "system", "content": "<task>scraper</task>"},
-        {"role": "user", "content": "Extract post titles and points from https://news.ycombinator.com"},
-    ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": {
-            "name": "scraper_schema",
-            "schema": {"type": "object", "properties": {}, "additionalProperties": True},
-        },
-    },
-)
+result = interfaze.tasks.scrape("https://news.ycombinator.com")
+
+print("Web Scrape Results:", result)
 ```
 
 ### Python — LangChain SDK
 
 ```python
-from langchain_core.messages import SystemMessage, HumanMessage
+import json
+from langchain_core.messages import HumanMessage, SystemMessage
 
-structured = interfaze.with_structured_output({
-    "name": "scraper_schema",
-    "schema": {"type": "object", "properties": {}, "additionalProperties": True},
-})
-
-response = structured.invoke([
+response = interfaze.invoke([
     SystemMessage(content="<task>scraper</task>"),
     HumanMessage(content="Extract post titles and points from https://news.ycombinator.com"),
 ])
+
+print("Web Scrape Results:", json.loads(response.content).get("result"))
 ```
+
+Task mode rules: only one `<task>` runs per request, and the response format must be an empty or `any` schema — passing a real schema alongside a task returns a 400.
+
+The result shape:
+
+```json
+{
+  "name": "ai_scraper",
+  "result": {
+    "scraped_content": { "title": ["...", "..."], "points": ["...", "..."] },
+    "scraped_elements": [
+      {
+        "selector": "span.titleline > a",
+        "key": "title",
+        "results": [{ "html": "...", "text": "...", "attributes": [{ "name": "href", "value": "..." }] }]
+      }
+    ],
+    "meta": { "title": "Hacker News" }
+  }
+}
+```
+
+Note that `scraped_content` values are arrays of strings keyed by your field names. Scrapes that happen mid-request as part of a larger answer appear in `precontext` under the name `web_extract` with the same result shape.

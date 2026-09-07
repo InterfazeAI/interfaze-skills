@@ -38,18 +38,27 @@ Extract text and structured fields from images and scanned documents using Inter
 
 ## Setup
 
-### TypeScript — OpenAI SDK
+Every SDK reads the API key from `INTERFAZE_API_KEY`.
 
-```ts
-import OpenAI from "openai";
+### TypeScript — Interfaze SDK
 
-const interfaze = new OpenAI({
-  baseURL: "https://api.interfaze.ai/v1",
-  apiKey: process.env.INTERFAZE_API_KEY,
-});
+```bash
+npm install interfaze
 ```
 
+```ts
+import { Interfaze } from "interfaze";
+
+const interfaze = new Interfaze();
+```
+
+No base URL or model name to configure — both are built in.
+
 ### TypeScript — Vercel AI SDK
+
+```bash
+npm install ai @ai-sdk/openai
+```
 
 ```ts
 import { createOpenAI } from "@ai-sdk/openai";
@@ -60,19 +69,57 @@ const interfaze = createOpenAI({
 });
 ```
 
+Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`.
+
 ### TypeScript — LangChain SDK
 
-```ts
-import { ChatOpenAI } from "@langchain/openai";
-
-const interfaze = new ChatOpenAI({
-  configuration: { baseURL: "https://api.interfaze.ai/v1" },
-  apiKey: process.env.INTERFAZE_API_KEY,
-  model: "interfaze-beta",
-});
+```bash
+npm install @interfaze-ai/langchain
 ```
 
-### Python — OpenAI SDK
+```ts
+import { ChatInterfaze } from "@interfaze-ai/langchain";
+
+const interfaze = new ChatInterfaze({ apiKey: process.env.INTERFAZE_API_KEY });
+```
+
+### Python — Interfaze SDK
+
+```bash
+pip install interfaze
+```
+
+```python
+from interfaze import Interfaze
+
+interfaze = Interfaze()
+```
+
+### Python — LangChain SDK
+
+```bash
+pip install interfaze-langchain
+```
+
+```python
+import os
+from interfaze_langchain import ChatInterfaze
+
+interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
+```
+
+### Already using the OpenAI SDK?
+
+Interfaze supports the Chat Completion API standard, so point an existing OpenAI client at it and pass `model: "interfaze-beta"` on every call.
+
+```ts
+import OpenAI from "openai";
+
+const interfaze = new OpenAI({
+  baseURL: "https://api.interfaze.ai/v1",
+  apiKey: process.env.INTERFAZE_API_KEY,
+});
+```
 
 ```python
 from openai import OpenAI
@@ -80,30 +127,24 @@ from openai import OpenAI
 interfaze = OpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>")
 ```
 
-### Python — LangChain SDK
-
-```python
-from langchain_openai import ChatOpenAI
-
-interfaze = ChatOpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>", model="interfaze-beta")
-```
-
 ## Input formats
 
-Model name is always `interfaze-beta`. Supported sources: public HTTPS URLs and base64 data.
+Supported sources: public HTTPS URLs and base64 data URLs.
 
 | SDK | Image part | PDF / document part |
 | --- | --- | --- |
+| Interfaze / LangChain (TS & Py) | `{ type: "image_url", image_url: { url: "<url>" } }` | `{ type: "file", file: { filename: "doc.pdf", file_data: "<url-or-base64>" } }` |
 | Vercel AI SDK | `{ type: "image", mediaType: "image/jpeg", image: "<url-or-base64>" }` | `{ type: "file", data: "<url>", mediaType: "application/pdf" }` |
-| OpenAI / LangChain (TS & Py) | `{ type: "image_url", image_url: { url: "<url>" } }` | `{ type: "file", file: { filename: "doc.pdf", file_data: "<url-or-base64>" } }` |
+
+Size limits: 20 MB as a file part, 80 MB when the URL is written directly into the prompt text. For large documents, put the URL in the prompt instead — the model fetches it at inference time.
 
 ## Example: extract fields from an ID card
 
-### TypeScript — OpenAI SDK
+### TypeScript — Interfaze SDK
 
 ```ts
+import { responseFormat } from "interfaze";
 import { z } from "zod";
-import { zodResponseFormat } from "openai/helpers/zod";
 
 const IDSchema = z.object({
   first_name: z.string().describe("First name on the ID"),
@@ -113,7 +154,6 @@ const IDSchema = z.object({
 });
 
 const response = await interfaze.chat.completions.create({
-  model: "interfaze-beta",
   messages: [
     {
       role: "user",
@@ -123,16 +163,17 @@ const response = await interfaze.chat.completions.create({
       ],
     },
   ],
-  response_format: zodResponseFormat(IDSchema, "id_schema"),
+  response_format: responseFormat(z.toJSONSchema(IDSchema), "id_schema"),
 });
 
-console.log(response.choices[0].message.content);
+console.log(JSON.parse(response.choices[0]?.message.content ?? "{}"));
+console.log("OCR Results:", response.precontext?.[0]?.result);
 ```
 
 ### TypeScript — Vercel AI SDK
 
 ```ts
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 
 const IDSchema = z.object({
@@ -142,9 +183,9 @@ const IDSchema = z.object({
   driver_licence_number: z.string().describe("Driver licence number on the ID"),
 });
 
-const { object } = await generateObject({
+const { output, response } = await generateText({
   model: interfaze.chat("interfaze-beta"),
-  schema: IDSchema,
+  output: Output.object({ schema: IDSchema }),
   messages: [
     {
       role: "user",
@@ -156,7 +197,10 @@ const { object } = await generateObject({
   ],
 });
 
-console.log(object);
+console.log(output);
+
+// @ts-expect-error precontext is not typed
+console.log("OCR Results:", response.body?.precontext?.[0]?.result);
 ```
 
 ### TypeScript — LangChain SDK
@@ -171,7 +215,7 @@ const IDSchema = z.object({
   driver_licence_number: z.string().describe("Driver licence number on the ID"),
 });
 
-const structuredModel = interfaze.withStructuredOutput(IDSchema);
+const structuredModel = interfaze.withStructuredOutput(IDSchema, { includeRaw: true });
 
 const response = await structuredModel.invoke([
   {
@@ -183,10 +227,11 @@ const response = await structuredModel.invoke([
   },
 ]);
 
-console.log(response);
+console.log(response.parsed);
+console.log("OCR Results:", response.raw.response_metadata.precontext?.[0]?.result);
 ```
 
-### Python — OpenAI SDK
+### Python — Interfaze SDK
 
 ```python
 from pydantic import BaseModel, Field
@@ -197,8 +242,7 @@ class IDSchema(BaseModel):
     dob: str = Field(..., description="Date of birth on the ID")
     driver_licence_number: str = Field(..., description="Driver licence number on the ID")
 
-response = interfaze.chat.completions.create(
-    model="interfaze-beta",
+response = interfaze.chat.completions.parse(
     messages=[
         {
             "role": "user",
@@ -208,13 +252,11 @@ response = interfaze.chat.completions.create(
             ],
         }
     ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": {"name": "id_schema", "schema": IDSchema.model_json_schema()},
-    },
+    response_format=IDSchema,
 )
 
-print(response.choices[0].message.content)
+print(response.choices[0].message.parsed)
+print("OCR Results:", response.precontext[0].result if response.precontext else None)
 ```
 
 ### Python — LangChain SDK
@@ -229,7 +271,7 @@ class IDSchema(BaseModel):
     dob: str = Field(..., description="Date of birth on the ID")
     driver_licence_number: str = Field(..., description="Driver licence number on the ID")
 
-structured_llm = interfaze.with_structured_output(IDSchema)
+structured_llm = interfaze.with_structured_output(IDSchema, include_raw=True)
 
 response = structured_llm.invoke([
     HumanMessage(content=[
@@ -238,12 +280,13 @@ response = structured_llm.invoke([
     ])
 ])
 
-print(response)
+print(response["parsed"])
+print("OCR Results:", response["raw"].response_metadata.get("precontext"))
 ```
 
 ## Example: receipt line items
 
-Same call as the ID card above — only the schema changes. Pass this schema to `response_format` / `generateObject` / `withStructuredOutput`:
+Same call as the ID card above — only the schema changes.
 
 ```ts
 const ReceiptSchema = z.object({
@@ -263,9 +306,28 @@ class ReceiptSchema(BaseModel):
     tax: str
 ```
 
+## Example: PDF document
+
+Swap the image part for a file part. The call is otherwise identical to the ID card example.
+
+```ts
+{
+  type: "file",
+  file: { filename: "research-paper.pdf", file_data: "https://arxiv.org/pdf/1706.03762" },
+}
+```
+```python
+{
+    "type": "file",
+    "file": {"filename": "research-paper.pdf", "file_data": "https://arxiv.org/pdf/1706.03762"},
+}
+```
+
+For the Vercel AI SDK, use `{ type: "file", data: "<url>", mediaType: "application/pdf" }`.
+
 ## Plain text (no schema)
 
-Use `generateText` (Vercel AI SDK), or omit `response_format` (OpenAI / LangChain) when you only need raw text:
+Drop the `response_format` / `output` argument when you only need raw text.
 
 ```ts
 import { generateText } from "ai";
@@ -284,83 +346,141 @@ const { text } = await generateText({
 });
 ```
 
+## Reading local files
+
+The Interfaze SDK's `inputs` helpers read a local file or raw bytes and build the content part.
+
+```ts
+import { inputs } from "interfaze";
+
+inputs.image(await inputs.fromPath("./photo.png"));
+inputs.file(await inputs.dataUrl(pdfBytes, "application/pdf"), { filename: "report.pdf" });
+```
+```python
+from interfaze import inputs
+
+inputs.image(inputs.from_path("./photo.png"))
+inputs.file(inputs.data_url(pdf_bytes, "application/pdf"), filename="report.pdf")
+```
+
 ## Tips
 
 - Use `.describe()` / `Field(description=...)` when a field name alone is ambiguous.
 - For multilingual text, name the target language in the prompt or field descriptions. 100+ languages, including mixed-language documents, are supported.
 - For layout-aware extraction, include coordinate fields in your schema.
+- The model corrects and normalizes text in the structured output. `precontext` holds the uncorrected raw OCR, which is what you want for auditing or confidence thresholds.
 
 ## Advanced: raw OCR output & bounding boxes
 
-For raw OCR (no custom schema) with line-level bounding boxes and per-word confidence, set `<task>ocr</task>` in the system message. The response's `precontext` contains `extracted_text` and `sections` with line-level bounding boxes and per-word confidence scores.
+Run OCR on its own to get a fixed output shape with line-level bounding boxes and per-word confidence, skipping the full model. This is faster and cheaper than a schema-driven call.
 
-### TypeScript — OpenAI SDK
+### TypeScript — Interfaze SDK
 
 ```ts
-const response = await interfaze.chat.completions.create({
-  model: "interfaze-beta",
-  messages: [
-    { role: "system", content: "<task>ocr</task>" },
-    {
-      role: "user",
-      content: [
-        { type: "text", text: "Extract all text from this image" },
-        { type: "image_url", image_url: { url: "<url>" } },
-      ],
-    },
-  ],
-  response_format: zodResponseFormat(z.any(), "empty_schema"),
-});
+const result = await interfaze.tasks.ocr("https://example.com/id.jpg");
+
+console.log(result);
 ```
 
 ### TypeScript — Vercel AI SDK
 
 ```ts
-const { object } = await generateObject({
+import { generateText, Output } from "ai";
+import { z } from "zod";
+
+const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>ocr</task>",
-  schema: z.any(),
+  output: Output.object({ schema: z.any() }),
   messages: [
     {
       role: "user",
       content: [
-        { type: "text", text: "Extract all text from this image" },
-        { type: "image", mediaType: "image/jpeg", image: "<url>" },
+        { type: "text", text: "Extract all text from this ID" },
+        { type: "image", mediaType: "image/jpeg", image: "https://example.com/id.jpg" },
       ],
     },
   ],
 });
+
+console.log(output);
 ```
 
-### Python — OpenAI SDK
-
-```python
-response = interfaze.chat.completions.create(
-    model="interfaze-beta",
-    messages=[
-        {"role": "system", "content": "<task>ocr</task>"},
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "Extract all text from this image"},
-                {"type": "image_url", "image_url": {"url": "<url>"}},
-            ],
-        },
-    ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": {
-            "name": "empty_schema",
-            "schema": {"type": "object", "properties": {}, "additionalProperties": True},
-        },
-    },
-)
-```
-
-For non-task calls, raw OCR results are also available on `response.precontext` (OpenAI SDK / Python) or `response.body?.precontext` (Vercel AI SDK):
+### TypeScript — LangChain SDK
 
 ```ts
-// @ts-expect-error precontext is not typed
-const precontext = response.precontext ?? response.body?.precontext;
-console.log("OCR Results:", precontext[0]?.result);
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+
+const response = await interfaze.invoke([
+  new SystemMessage("<task>ocr</task>"),
+  new HumanMessage({
+    content: [
+      { type: "text", text: "Extract all text from this ID" },
+      { type: "image_url", image_url: { url: "https://example.com/id.jpg" } },
+    ],
+  }),
+]);
+
+const { result } = JSON.parse(response.content as string);
+console.log(result);
 ```
+
+### Python — Interfaze SDK
+
+```python
+result = interfaze.tasks.ocr("https://example.com/id.jpg")
+
+print(result)
+```
+
+### Python — LangChain SDK
+
+```python
+import json
+from langchain_core.messages import HumanMessage, SystemMessage
+
+response = interfaze.invoke([
+    SystemMessage(content="<task>ocr</task>"),
+    HumanMessage(content=[
+        {"type": "text", "text": "Extract all text from this ID"},
+        {"type": "image_url", "image_url": {"url": "https://example.com/id.jpg"}},
+    ]),
+])
+
+print(json.loads(response.content).get("result"))
+```
+
+Task mode rules: only one `<task>` runs per request, and the response format must be an empty or `any` schema — passing a real schema alongside a task returns a 400.
+
+The result shape:
+
+```json
+{
+  "name": "ocr",
+  "result": {
+    "extracted_text": "California\nUSA\nDRIVER LICENSE\n...",
+    "sections": [
+      {
+        "text": "California\nUSA\n...",
+        "lines": [
+          {
+            "text": "California",
+            "bounds": {
+              "top_left": { "x": 63, "y": 89 },
+              "bottom_right": { "x": 268, "y": 129 },
+              "width": 205,
+              "height": 40
+            },
+            "average_confidence": 0.99,
+            "words": [{ "text": "California", "confidence": 0.99, "bounds": {} }]
+          }
+        ]
+      }
+    ],
+    "width": 698,
+    "height": 525
+  }
+}
+```
+
+The same data is available on `precontext` for normal (non-task) calls, alongside your schema output.

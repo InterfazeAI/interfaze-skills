@@ -4,7 +4,7 @@ Installable [Agent Skills](https://agentskills.io) for [Interfaze AI](https://in
 
 ## What is Interfaze AI?
 
-Interfaze AI is a proprietary multimodal AI model accessible through an chat-completions compatible API. It handles vision OCR, speech-to-text, structured output, object detection, web scraping, and document processing through a single unified endpoint — no tool routing or multi-provider setup required.
+Interfaze AI is a proprietary multimodal AI model accessible through a chat-completions compatible API. It handles vision OCR, speech-to-text, structured output, object detection, web search, web scraping, and document processing through a single unified endpoint — no tool routing or multi-provider setup required.
 
 ## Included skills
 
@@ -39,18 +39,37 @@ npx skills add JigsawStack/interfaze-skills --list
 
 ## Setup
 
-Interfaze AI uses an OpenAI-compatible API. Set your API key and base URL:
+Set `INTERFAZE_API_KEY` in your environment, then install the SDK for your stack.
 
-```ts
-import { createOpenAI } from "@ai-sdk/openai";
-
-const interfaze = createOpenAI({
-  baseURL: "https://api.interfaze.ai/v1",
-  apiKey: process.env.INTERFAZE_API_KEY,
-});
+```bash
+npm install interfaze          # TypeScript
+pip install interfaze          # Python
 ```
 
-Use the model name `interfaze-beta` with Vercel AI SDK functions like `generateObject` and `generateText`.
+```ts
+import { Interfaze } from "interfaze";
+
+const interfaze = new Interfaze();
+```
+
+```python
+from interfaze import Interfaze
+
+interfaze = Interfaze()
+```
+
+The base URL and model name are built in, and the client reads `INTERFAZE_API_KEY` automatically.
+
+### Other SDKs
+
+| SDK | Package | Entry point |
+| --- | --- | --- |
+| LangChain (TypeScript) | `@interfaze-ai/langchain` | `new ChatInterfaze()` |
+| LangChain (Python) | `interfaze-langchain` | `ChatInterfaze()` |
+| Vercel AI SDK | `ai` + `@ai-sdk/openai` | `createOpenAI({ baseURL, apiKey })` |
+| OpenAI SDK | `openai` | `new OpenAI({ baseURL, apiKey })` |
+
+The Vercel AI SDK and OpenAI SDK talk to Interfaze over the Chat Completion API standard, so they need the base URL `https://api.interfaze.ai/v1` and the model name `interfaze-beta`. Each skill's `## Setup` section has the full snippet for every SDK.
 
 ## When to use AGENTS.md vs SKILL.md
 

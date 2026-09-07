@@ -32,24 +32,39 @@ Generate outputs into strict, schema-validated JSON using Zod (TypeScript) or Py
 1. Identify the target output shape from the user's request.
 2. Define a Zod (TypeScript) or Pydantic (Python) schema matching the expected structure.
 3. Pass the schema via the SDK's structured-output mechanism:
-   - Vercel AI SDK: `generateObject({ schema })`
-   - OpenAI SDK: `response_format` with `zodResponseFormat` (TS) or `json_schema` (Python)
+   - Interfaze SDK: `responseFormat(z.toJSONSchema(Schema), "name")` (TS) or `completions.parse(response_format=Model)` (Python)
+   - Vercel AI SDK: `generateText({ output: Output.object({ schema }) })`
    - LangChain SDK: `withStructuredOutput` / `with_structured_output`
+
+## Rules that affect every schema
+
+- Keep the schema root an `object`. A non-object root gets wrapped under a `result` key.
+- With the Interfaze SDK in TypeScript and the OpenAI SDK, `message.content` comes back as a JSON string — parse it. The Python `parse()` helper, Vercel AI SDK, and LangChain all hand back a decoded object.
+- `strict` defaults to `false`. Interfaze follows the OpenAI structured output specification.
 
 ## Setup
 
-### TypeScript — OpenAI SDK
+Every SDK reads the API key from `INTERFAZE_API_KEY`.
 
-```ts
-import OpenAI from "openai";
+### TypeScript — Interfaze SDK
 
-const interfaze = new OpenAI({
-  baseURL: "https://api.interfaze.ai/v1",
-  apiKey: process.env.INTERFAZE_API_KEY,
-});
+```bash
+npm install interfaze
 ```
 
+```ts
+import { Interfaze } from "interfaze";
+
+const interfaze = new Interfaze();
+```
+
+No base URL or model name to configure — both are built in.
+
 ### TypeScript — Vercel AI SDK
+
+```bash
+npm install ai @ai-sdk/openai
+```
 
 ```ts
 import { createOpenAI } from "@ai-sdk/openai";
@@ -60,19 +75,57 @@ const interfaze = createOpenAI({
 });
 ```
 
+Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`.
+
 ### TypeScript — LangChain SDK
 
-```ts
-import { ChatOpenAI } from "@langchain/openai";
-
-const interfaze = new ChatOpenAI({
-  configuration: { baseURL: "https://api.interfaze.ai/v1" },
-  apiKey: process.env.INTERFAZE_API_KEY,
-  model: "interfaze-beta",
-});
+```bash
+npm install @interfaze-ai/langchain
 ```
 
-### Python — OpenAI SDK
+```ts
+import { ChatInterfaze } from "@interfaze-ai/langchain";
+
+const interfaze = new ChatInterfaze({ apiKey: process.env.INTERFAZE_API_KEY });
+```
+
+### Python — Interfaze SDK
+
+```bash
+pip install interfaze
+```
+
+```python
+from interfaze import Interfaze
+
+interfaze = Interfaze()
+```
+
+### Python — LangChain SDK
+
+```bash
+pip install interfaze-langchain
+```
+
+```python
+import os
+from interfaze_langchain import ChatInterfaze
+
+interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
+```
+
+### Already using the OpenAI SDK?
+
+Point an existing OpenAI client at Interfaze and pass `model: "interfaze-beta"` on every call. Use `zodResponseFormat(Schema, "schema_name")` from `openai/helpers/zod` in TypeScript, or a `json_schema` response format built from `Model.model_json_schema()` in Python.
+
+```ts
+import OpenAI from "openai";
+
+const interfaze = new OpenAI({
+  baseURL: "https://api.interfaze.ai/v1",
+  apiKey: process.env.INTERFAZE_API_KEY,
+});
+```
 
 ```python
 from openai import OpenAI
@@ -80,21 +133,13 @@ from openai import OpenAI
 interfaze = OpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>")
 ```
 
-### Python — LangChain SDK
-
-```python
-from langchain_openai import ChatOpenAI
-
-interfaze = ChatOpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>", model="interfaze-beta")
-```
-
 ## Example: generate a structured object from a prompt
 
-### TypeScript — OpenAI SDK
+### TypeScript — Interfaze SDK
 
 ```ts
+import { responseFormat } from "interfaze";
 import { z } from "zod";
-import { zodResponseFormat } from "openai/helpers/zod";
 
 const CodeSchema = z.object({
   code: z.string(),
@@ -103,20 +148,19 @@ const CodeSchema = z.object({
 });
 
 const response = await interfaze.chat.completions.create({
-  model: "interfaze-beta",
   messages: [
     { role: "user", content: "Write a Python script to check CPU type using subprocess." },
   ],
-  response_format: zodResponseFormat(CodeSchema, "code_schema"),
+  response_format: responseFormat(z.toJSONSchema(CodeSchema), "code_schema"),
 });
 
-console.log(response.choices[0].message.content);
+console.log(JSON.parse(response.choices[0]?.message.content ?? "{}"));
 ```
 
 ### TypeScript — Vercel AI SDK
 
 ```ts
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 
 const CodeSchema = z.object({
@@ -125,13 +169,13 @@ const CodeSchema = z.object({
   sample_output: z.string(),
 });
 
-const { object } = await generateObject({
+const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
-  schema: CodeSchema,
+  output: Output.object({ schema: CodeSchema }),
   prompt: "Write a Python script to check CPU type using subprocess.",
 });
 
-console.log(object);
+console.log(output);
 ```
 
 ### TypeScript — LangChain SDK
@@ -147,14 +191,14 @@ const CodeSchema = z.object({
 
 const structuredModel = interfaze.withStructuredOutput(CodeSchema);
 
-const response = await structuredModel.invoke([
-  { role: "user", content: "Write a Python script to check CPU type using subprocess." },
-]);
+const response = await structuredModel.invoke(
+  "Write a Python script to check CPU type using subprocess."
+);
 
 console.log(response);
 ```
 
-### Python — OpenAI SDK
+### Python — Interfaze SDK
 
 ```python
 from pydantic import BaseModel
@@ -164,18 +208,14 @@ class CodeSchema(BaseModel):
     sample_input: str
     sample_output: str
 
-response = interfaze.chat.completions.create(
-    model="interfaze-beta",
+response = interfaze.chat.completions.parse(
     messages=[
         {"role": "user", "content": "Write a Python script to check CPU type using subprocess."},
     ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": {"name": "code_schema", "schema": CodeSchema.model_json_schema()},
-    },
+    response_format=CodeSchema,
 )
 
-print(response.choices[0].message.content)
+print(response.choices[0].message.parsed)
 ```
 
 ### Python — LangChain SDK
@@ -197,19 +237,17 @@ print(response)
 
 ## Example: array of structured objects
 
-Use an array at the top level (or a wrapper object with a list field):
+Wrap the list in an object rather than using an array at the root.
 
 ```ts
-const { object } = await generateObject({
-  model: interfaze.chat("interfaze-beta"),
-  schema: z.array(
+const LanguagesSchema = z.object({
+  languages: z.array(
     z.object({
       name: z.string(),
       rank: z.number(),
       primary_use_case: z.string(),
     })
   ),
-  prompt: "List the top 5 programming languages by popularity.",
 });
 ```
 ```python
@@ -226,7 +264,6 @@ class LanguagesSchema(BaseModel):
 
 - Use `.nullable()` (Zod) or `Optional[T] = None` (Pydantic) for fields that may not be present.
 - Use `.describe()` (Zod) or `Field(description=...)` (Pydantic) to clarify ambiguous fields — the model reads these descriptions.
-- Use `z.array(...)` / `List[...]` at the top level when extracting lists.
 - Keep schemas focused. Prefer multiple targeted calls over one massive schema.
 
 ## Schema patterns
@@ -310,7 +347,34 @@ class SpatialSchema(BaseModel):
 
 ## Response handling
 
-- All SDKs return an object that matches your schema exactly.
-- Vercel AI SDK: `const { object } = await generateObject({ schema, ... })`; invalid responses are retried automatically.
-- OpenAI SDK: parse `response.choices[0].message.content` as JSON.
-- LangChain SDK: the call returns the typed object directly.
+- **Interfaze SDK (TS):** parse `response.choices[0].message.content`.
+- **Interfaze SDK (Python):** read `response.choices[0].message.parsed`.
+- **Vercel AI SDK:** destructure `output` from `generateText`.
+- **LangChain SDK:** the call returns the typed object directly. Pass `includeRaw: true` / `include_raw=True` to get `{ parsed, raw }` instead.
+
+## Reading precontext alongside your schema
+
+When Interfaze runs a task to answer the request — OCR, web search, transcription — the raw output of that task comes back as `precontext` next to your structured object. Use it for confidence scores, bounding boxes, timestamps, and source URLs.
+
+```ts
+// Interfaze SDK
+response.precontext?.[0]?.result;
+
+// Vercel AI SDK — untyped, read off the raw body
+// @ts-expect-error precontext is not typed
+response.body?.precontext;
+
+// LangChain SDK — requires includeRaw
+response.raw.response_metadata.precontext;
+```
+```python
+# Interfaze SDK
+response.precontext[0].result if response.precontext else None
+
+# LangChain SDK — requires include_raw=True
+response["raw"].response_metadata.get("precontext")
+```
+
+## Streaming structured output
+
+Use `streamText` with `partialOutputStream` (Vercel AI SDK) or `interfaze.stream(...)` (LangChain) when you want partial objects as they are produced.

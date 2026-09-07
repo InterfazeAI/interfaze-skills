@@ -37,18 +37,27 @@ Transcribe audio files into text with speaker diarization, timestamps, translati
 
 ## Setup
 
-### TypeScript — OpenAI SDK
+Every SDK reads the API key from `INTERFAZE_API_KEY`.
 
-```ts
-import OpenAI from "openai";
+### TypeScript — Interfaze SDK
 
-const interfaze = new OpenAI({
-  baseURL: "https://api.interfaze.ai/v1",
-  apiKey: process.env.INTERFAZE_API_KEY,
-});
+```bash
+npm install interfaze
 ```
 
+```ts
+import { Interfaze } from "interfaze";
+
+const interfaze = new Interfaze();
+```
+
+No base URL or model name to configure — both are built in.
+
 ### TypeScript — Vercel AI SDK
+
+```bash
+npm install ai @ai-sdk/openai
+```
 
 ```ts
 import { createOpenAI } from "@ai-sdk/openai";
@@ -59,19 +68,57 @@ const interfaze = createOpenAI({
 });
 ```
 
+Requires `ai@^6.0.0` and `@ai-sdk/openai@^3.0.0`.
+
 ### TypeScript — LangChain SDK
 
-```ts
-import { ChatOpenAI } from "@langchain/openai";
-
-const interfaze = new ChatOpenAI({
-  configuration: { baseURL: "https://api.interfaze.ai/v1" },
-  apiKey: process.env.INTERFAZE_API_KEY,
-  model: "interfaze-beta",
-});
+```bash
+npm install @interfaze-ai/langchain
 ```
 
-### Python — OpenAI SDK
+```ts
+import { ChatInterfaze } from "@interfaze-ai/langchain";
+
+const interfaze = new ChatInterfaze({ apiKey: process.env.INTERFAZE_API_KEY });
+```
+
+### Python — Interfaze SDK
+
+```bash
+pip install interfaze
+```
+
+```python
+from interfaze import Interfaze
+
+interfaze = Interfaze()
+```
+
+### Python — LangChain SDK
+
+```bash
+pip install interfaze-langchain
+```
+
+```python
+import os
+from interfaze_langchain import ChatInterfaze
+
+interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
+```
+
+### Already using the OpenAI SDK?
+
+Point an existing OpenAI client at Interfaze and pass `model: "interfaze-beta"` on every call.
+
+```ts
+import OpenAI from "openai";
+
+const interfaze = new OpenAI({
+  baseURL: "https://api.interfaze.ai/v1",
+  apiKey: process.env.INTERFAZE_API_KEY,
+});
+```
 
 ```python
 from openai import OpenAI
@@ -79,65 +126,62 @@ from openai import OpenAI
 interfaze = OpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>")
 ```
 
-### Python — LangChain SDK
-
-```python
-from langchain_openai import ChatOpenAI
-
-interfaze = ChatOpenAI(base_url="https://api.interfaze.ai/v1", api_key="<your-api-key>", model="interfaze-beta")
-```
-
 ## Input formats
 
-Model name is always `interfaze-beta`. Sources: public HTTPS URLs and base64 data.
+Sources: public HTTPS URLs and base64 data URLs.
 
 | SDK | Audio part |
 | --- | --- |
+| Interfaze / LangChain (TS & Py) | `{ type: "file", file: { filename: "audio.mp3", file_data: "<url-or-base64>" } }` |
 | Vercel AI SDK | `{ type: "file", data: "<url>", mediaType: "audio/mpeg" }` |
-| OpenAI / LangChain (TS & Py) | `{ type: "file", file: { filename: "audio.mp3", file_data: "<url-or-base64>" } }` |
 
-You can also pass the URL inline in the prompt across all SDKs — `{ role: "user", content: "Transcribe https://example.com/audio.mp3" }` — which is slightly faster than a file part.
+You can also pass the URL inline in the prompt across all SDKs — `{ role: "user", content: "Transcribe https://example.com/audio.mp3" }` — which is slightly faster and raises the size cap from 20 MB to 80 MB.
 
 MIME types: MP3 → `audio/mpeg`, WAV → `audio/wav`, M4A → `audio/mp4`. Other formats use their canonical IANA MIME type.
 
+The Interfaze SDK's `inputs.audio(url)` / `inputs.file(...)` helpers build these parts, and `inputs.fromPath()` / `inputs.from_path()` reads a local file.
+
 ## Example: basic transcription
 
-### TypeScript — OpenAI SDK
+### TypeScript — Interfaze SDK
 
 ```ts
+import { responseFormat } from "interfaze";
 import { z } from "zod";
-import { zodResponseFormat } from "openai/helpers/zod";
 
 const STTSchema = z.object({ text: z.string() });
 
 const response = await interfaze.chat.completions.create({
-  model: "interfaze-beta",
   messages: [
     {
       role: "user",
       content: [
         { type: "text", text: "Transcribe the audio file" },
-        { type: "file", file: { filename: "voice-note.mp3", file_data: "https://example.com/voice-note.mp3" } },
+        {
+          type: "file",
+          file: { filename: "voice-note.mp3", file_data: "https://example.com/voice-note.mp3" },
+        },
       ],
     },
   ],
-  response_format: zodResponseFormat(STTSchema, "stt_schema"),
+  response_format: responseFormat(z.toJSONSchema(STTSchema), "stt_schema"),
 });
 
-console.log(response.choices[0].message.content);
+console.log(JSON.parse(response.choices[0]?.message.content ?? "{}"));
+console.log("STT Results:", response.precontext?.[0]?.result);
 ```
 
 ### TypeScript — Vercel AI SDK
 
 ```ts
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 
 const STTSchema = z.object({ text: z.string() });
 
-const { object } = await generateObject({
+const { output, response } = await generateText({
   model: interfaze.chat("interfaze-beta"),
-  schema: STTSchema,
+  output: Output.object({ schema: STTSchema }),
   messages: [
     {
       role: "user",
@@ -149,7 +193,10 @@ const { object } = await generateObject({
   ],
 });
 
-console.log(object);
+console.log(output);
+
+// @ts-expect-error precontext is not typed
+console.log("STT Results:", response.body?.precontext?.[0]?.result);
 ```
 
 ### TypeScript — LangChain SDK
@@ -159,22 +206,26 @@ import { z } from "zod";
 
 const STTSchema = z.object({ text: z.string() });
 
-const structuredModel = interfaze.withStructuredOutput(STTSchema);
+const structuredModel = interfaze.withStructuredOutput(STTSchema, { includeRaw: true });
 
 const response = await structuredModel.invoke([
   {
     role: "user",
     content: [
       { type: "text", text: "Transcribe the audio file" },
-      { type: "file", file: { filename: "voice-note.mp3", file_data: "https://example.com/voice-note.mp3" } },
+      {
+        type: "file",
+        file: { filename: "voice-note.mp3", file_data: "https://example.com/voice-note.mp3" },
+      },
     ],
   },
 ]);
 
-console.log(response);
+console.log(response.parsed);
+console.log("STT Results:", response.raw.response_metadata.precontext?.[0]?.result);
 ```
 
-### Python — OpenAI SDK
+### Python — Interfaze SDK
 
 ```python
 from pydantic import BaseModel
@@ -182,24 +233,27 @@ from pydantic import BaseModel
 class STTSchema(BaseModel):
     text: str
 
-response = interfaze.chat.completions.create(
-    model="interfaze-beta",
+response = interfaze.chat.completions.parse(
     messages=[
         {
             "role": "user",
             "content": [
                 {"type": "text", "text": "Transcribe the audio file"},
-                {"type": "file", "file": {"filename": "voice-note.mp3", "file_data": "https://example.com/voice-note.mp3"}},
+                {
+                    "type": "file",
+                    "file": {
+                        "filename": "voice-note.mp3",
+                        "file_data": "https://example.com/voice-note.mp3",
+                    },
+                },
             ],
         }
     ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": {"name": "stt_schema", "schema": STTSchema.model_json_schema()},
-    },
+    response_format=STTSchema,
 )
 
-print(response.choices[0].message.content)
+print(response.choices[0].message.parsed)
+print("STT Results:", response.precontext[0].result if response.precontext else None)
 ```
 
 ### Python — LangChain SDK
@@ -211,16 +265,23 @@ from pydantic import BaseModel
 class STTSchema(BaseModel):
     text: str
 
-structured_llm = interfaze.with_structured_output(STTSchema)
+structured_llm = interfaze.with_structured_output(STTSchema, include_raw=True)
 
 response = structured_llm.invoke([
     HumanMessage(content=[
         {"type": "text", "text": "Transcribe the audio file"},
-        {"type": "file", "file": {"filename": "voice-note.mp3", "file_data": "https://example.com/voice-note.mp3"}},
+        {
+            "type": "file",
+            "file": {
+                "filename": "voice-note.mp3",
+                "file_data": "https://example.com/voice-note.mp3",
+            },
+        },
     ])
 ])
 
-print(response)
+print(response["parsed"])
+print("STT Results:", response["raw"].response_metadata.get("precontext"))
 ```
 
 ## Example: speaker diarization
@@ -256,7 +317,7 @@ class DiarizationSchema(BaseModel):
 
 ## Example: audio translation
 
-Include the target language in the prompt (e.g. "translate to Chinese") and use this schema:
+Include the target language in the prompt (e.g. "Transcribe the audio file and translate it to Chinese") and use this schema. Both the transcription and the translation show up as separate `precontext` entries.
 
 ```ts
 const TranslationSchema = z.object({
@@ -272,63 +333,109 @@ class TranslationSchema(BaseModel):
     translated_language_code: str
 ```
 
+## Example: audio summary and intent
+
+Add derived fields alongside the transcript and the model fills them in one pass.
+
+```ts
+const STTSchema = z.object({
+  text: z.string(),
+  summary: z.string().describe("two line summary of the audio"),
+  intent: z.string().describe("3 word intent of the audio"),
+});
+```
+
 ## Plain transcription (no schema)
 
-Use `generateText` (Vercel AI SDK) or omit `response_format` (OpenAI / LangChain) when you only need raw text.
+Drop the `response_format` / `output` argument when you only need raw text.
 
 ## Tips
 
 - Use canonical MIME types: `audio/mpeg` (MP3), `audio/wav` (WAV), `audio/mp4` (M4A).
 - Include "identify the speakers" in the prompt to trigger diarization.
 - Specify the target language in the prompt for translation.
+- Low-quality audio is de-noised automatically before transcription.
+- 100+ languages are supported, including mixed-language audio.
 
 ## Advanced: long audio & word-level timestamps
 
-For long audio (1hr+) or lowest cost/latency, run as a single task with `<task>speech_to_text</task>` in the system message. The response contains `text` and `chunks: [{ timestamp: [start, end], text }]`.
+For long audio (1hr+) or the lowest cost and latency, run transcription on its own. This activates only the audio part of the model — a 1hr 35min file transcribes in about 50 seconds. Ask for transcription "by word" to get word-level timestamps.
 
-### TypeScript — OpenAI SDK
+### TypeScript — Interfaze SDK
 
 ```ts
-const response = await interfaze.chat.completions.create({
-  model: "interfaze-beta",
-  messages: [
-    { role: "system", content: "<task>speech_to_text</task>" },
-    { role: "user", content: [{ type: "text", text: "Transcribe https://example.com/audio.mp3" }] },
-  ],
-  response_format: zodResponseFormat(z.any(), "empty_schema"),
-});
+const result = await interfaze.tasks.transcribe("https://example.com/audio.mp3");
+
+console.log(result);
 ```
 
 ### TypeScript — Vercel AI SDK
 
 ```ts
-const { object } = await generateObject({
+import { generateText, Output } from "ai";
+import { z } from "zod";
+
+const { output } = await generateText({
   model: interfaze.chat("interfaze-beta"),
   system: "<task>speech_to_text</task>",
-  schema: z.any(),
-  messages: [
-    { role: "user", content: [{ type: "text", text: "Transcribe https://example.com/audio.mp3" }] },
-  ],
+  output: Output.object({ schema: z.any() }),
+  prompt: "Transcribe the audio file https://example.com/audio.mp3",
 });
+
+console.log(output);
 ```
 
-### Python — OpenAI SDK
+### TypeScript — LangChain SDK
+
+```ts
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+
+const response = await interfaze.invoke([
+  new SystemMessage("<task>speech_to_text</task>"),
+  new HumanMessage("Transcribe the audio file https://example.com/audio.mp3"),
+]);
+
+const { result } = JSON.parse(response.content as string);
+console.log(result);
+```
+
+### Python — Interfaze SDK
 
 ```python
-response = interfaze.chat.completions.create(
-    model="interfaze-beta",
-    messages=[
-        {"role": "system", "content": "<task>speech_to_text</task>"},
-        {"role": "user", "content": [{"type": "text", "text": "Transcribe https://example.com/audio.mp3"}]},
-    ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": {
-            "name": "empty_schema",
-            "schema": {"type": "object", "properties": {}, "additionalProperties": True},
-        },
-    },
-)
+result = interfaze.tasks.transcribe("https://example.com/audio.mp3")
+
+print(result)
 ```
 
-**Precontext:** `precontext` on the response (`response.precontext` for OpenAI SDK / Python, `response.body?.precontext` for Vercel AI SDK) contains `name: "stt"` (raw transcript with `chunks[].timestamp`) and, when translation is requested, `name: "translate"` (`source_language`, `target_language`, `translated_text`).
+### Python — LangChain SDK
+
+```python
+import json
+from langchain_core.messages import HumanMessage, SystemMessage
+
+response = interfaze.invoke([
+    SystemMessage(content="<task>speech_to_text</task>"),
+    HumanMessage(content="Transcribe the audio file https://example.com/audio.mp3"),
+])
+
+print(json.loads(response.content).get("result"))
+```
+
+Task mode rules: only one `<task>` runs per request, and the response format must be an empty or `any` schema — passing a real schema alongside a task returns a 400.
+
+The result shape:
+
+```json
+{
+  "name": "speech_to_text",
+  "result": {
+    "text": "I just started a round of amoxicillin and I wanted to ask ...",
+    "chunks": [
+      { "timestamp": [0.28, 4], "text": "I just started a round of amoxicillin and I wanted to ask" },
+      { "timestamp": [4, 7.72], "text": "if it was safe to take that with my current spironolactone prescription." }
+    ]
+  }
+}
+```
+
+For normal (non-task) calls the same data arrives on `precontext` under the name `stt`, alongside a `translate` entry when translation was requested.
