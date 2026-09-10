@@ -116,7 +116,7 @@ interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
 
 ### Already using the OpenAI SDK?
 
-Point an existing OpenAI client at Interfaze and pass `model: "interfaze-beta"` on every call. Use `zodResponseFormat(Schema, "schema_name")` from `openai/helpers/zod` in TypeScript, or a `json_schema` response format built from `Model.model_json_schema()` in Python.
+Point an existing OpenAI client at Interfaze and pass `model: "interfaze"` on every call. Use `zodResponseFormat(Schema, "schema_name")` from `openai/helpers/zod` in TypeScript, or a `json_schema` response format built from `Model.model_json_schema()` in Python.
 
 ```ts
 import OpenAI from "openai";
@@ -170,7 +170,7 @@ const CodeSchema = z.object({
 });
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: CodeSchema }),
   prompt: "Write a Python script to check CPU type using subprocess.",
 });

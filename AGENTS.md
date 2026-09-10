@@ -5,7 +5,7 @@ This repo contains installable Agent Skills for Interfaze AI. Follow these rules
 ## General rules
 
 - Interfaze AI is a proprietary multimodal model. It has first-party SDKs and also supports the Chat Completion API standard, so OpenAI-compatible clients work against its base URL.
-- API base URL: `https://api.interfaze.ai/v1`. Model name: `interfaze-beta`. The first-party SDKs have both built in, so neither is configured when using them.
+- API base URL: `https://api.interfaze.ai/v1`. Model name: `interfaze`. The first-party SDKs have both built in, so neither is configured when using them.
 - Interfaze supports the Chat Completion API standard, not the Responses API standard.
 - Always require `INTERFAZE_API_KEY` as an environment variable. The first-party SDKs read it automatically.
 - Only document how to use the API — inputs, outputs, and patterns.
@@ -25,7 +25,7 @@ Use these section labels consistently inside each example, in this order:
 4. `### Python — Interfaze SDK`
 5. `### Python — LangChain SDK`
 
-The Interfaze SDK is the default recommendation — lead with it. The OpenAI SDK still works by pointing `baseURL` at Interfaze and passing `model: "interfaze-beta"`; document that once in each skill's `## Setup` section rather than repeating it as a sixth tab on every example.
+The Interfaze SDK is the default recommendation — lead with it. The OpenAI SDK still works by pointing `baseURL` at Interfaze and passing `model: "interfaze"`; document that once in each skill's `## Setup` section rather than repeating it as a sixth tab on every example.
 
 ## Skill authoring
 
@@ -58,7 +58,7 @@ The Interfaze SDK is the default recommendation — lead with it. The OpenAI SDK
 
 ### Vercel AI SDK (TypeScript)
 
-- Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`. Create the provider with `createOpenAI({ baseURL, apiKey })` and select the model with `interfaze.chat("interfaze-beta")`.
+- Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`. Create the provider with `createOpenAI({ baseURL, apiKey })` and select the model with `interfaze.chat("interfaze")`.
 - Use `generateText` with `output: Output.object({ schema })` for structured output, and read the result off `output`. Do not use `generateObject`.
 - Use `output: Output.json()` when running a raw `<task>`, since no schema is sent.
 - Use plain `generateText` for text, and `streamText` (with `partialOutputStream` for structured data) for streaming.

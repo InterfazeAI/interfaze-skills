@@ -107,7 +107,7 @@ interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
 
 ### Already using the OpenAI SDK?
 
-Point an existing OpenAI client at Interfaze and pass `model: "interfaze-beta"` on every call.
+Point an existing OpenAI client at Interfaze and pass `model: "interfaze"` on every call.
 
 ```ts
 import OpenAI from "openai";
@@ -143,7 +143,7 @@ console.log("Web Search Results:", response.precontext?.[0]?.result);
 import { generateText } from "ai";
 
 const { text, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   prompt: "Latest news on Nvidia",
 });
 
@@ -217,7 +217,7 @@ const NvidiaNewsSchema = z.object({
 });
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: NvidiaNewsSchema }),
   prompt: "Latest news on Nvidia",
 });
@@ -340,7 +340,7 @@ console.log("Web Search Results:", result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>web_search</task>",
   output: Output.json(),
   prompt: "GLP-1 research paper",

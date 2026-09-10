@@ -5,7 +5,7 @@ Single-file reference combining all six Interfaze AI skills. Each capability als
 Interfaze AI is a proprietary multimodal model with first-party SDKs for TypeScript and Python. It also supports the Chat Completion API standard, so OpenAI-compatible clients work against its base URL.
 
 - **Base URL:** `https://api.interfaze.ai/v1` (built into the first-party SDKs)
-- **Model:** `interfaze-beta` (built into the first-party SDKs)
+- **Model:** `interfaze` (built into the first-party SDKs)
 - **Auth:** `Authorization: Bearer $INTERFAZE_API_KEY`
 
 ## Contents
@@ -92,7 +92,7 @@ interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
 
 ### Already using the OpenAI SDK?
 
-Interfaze supports the Chat Completion API standard, so point an existing OpenAI client at it and pass `model: "interfaze-beta"` on every call.
+Interfaze supports the Chat Completion API standard, so point an existing OpenAI client at it and pass `model: "interfaze"` on every call.
 
 ```ts
 import OpenAI from "openai";
@@ -196,7 +196,7 @@ const IDSchema = z.object({
 });
 
 const { output, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: IDSchema }),
   messages: [
     {
@@ -345,7 +345,7 @@ Drop the `response_format` / `output` argument when you only need raw text.
 import { generateText } from "ai";
 
 const { text } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   messages: [
     {
       role: "user",
@@ -400,7 +400,7 @@ console.log(result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>ocr</task>",
   output: Output.json(),
   messages: [
@@ -577,7 +577,7 @@ import { z } from "zod";
 const STTSchema = z.object({ text: z.string() });
 
 const { output, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: STTSchema }),
   messages: [
     {
@@ -772,7 +772,7 @@ console.log(result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>speech_to_text</task>",
   output: Output.json(),
   prompt: "Transcribe the audio file https://example.com/audio.mp3",
@@ -906,7 +906,7 @@ const CodeSchema = z.object({
 });
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: CodeSchema }),
   prompt: "Write a Python script to check CPU type using subprocess.",
 });
@@ -1232,7 +1232,7 @@ const DetectionSchema = z.object({
 });
 
 const { output, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: DetectionSchema }),
   messages: [
     {
@@ -1431,7 +1431,7 @@ console.log(result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>object_detection</task>",
   output: Output.json(),
   messages: [
@@ -1592,7 +1592,7 @@ console.log("Web Search Results:", response.precontext?.[0]?.result);
 import { generateText } from "ai";
 
 const { text, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   prompt: "Latest news on Nvidia",
 });
 
@@ -1666,7 +1666,7 @@ const NvidiaNewsSchema = z.object({
 });
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: NvidiaNewsSchema }),
   prompt: "Latest news on Nvidia",
 });
@@ -1789,7 +1789,7 @@ console.log("Web Search Results:", result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>web_search</task>",
   output: Output.json(),
   prompt: "GLP-1 research paper",
@@ -1930,7 +1930,7 @@ const ProductSchema = z.object({
 });
 
 const { output, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: ProductSchema }),
   prompt: "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL",
 });
@@ -2080,7 +2080,7 @@ console.log("Web Scrape Results:", result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>scraper</task>",
   output: Output.json(),
   prompt: "Extract post titles and points from https://news.ycombinator.com",

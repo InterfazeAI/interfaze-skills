@@ -109,7 +109,7 @@ interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
 
 ### Already using the OpenAI SDK?
 
-Point an existing OpenAI client at Interfaze and pass `model: "interfaze-beta"` on every call.
+Point an existing OpenAI client at Interfaze and pass `model: "interfaze"` on every call.
 
 ```ts
 import OpenAI from "openai";
@@ -180,7 +180,7 @@ import { z } from "zod";
 const STTSchema = z.object({ text: z.string() });
 
 const { output, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: STTSchema }),
   messages: [
     {
@@ -375,7 +375,7 @@ console.log(result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>speech_to_text</task>",
   output: Output.json(),
   prompt: "Transcribe the audio file https://example.com/audio.mp3",

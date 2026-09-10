@@ -110,7 +110,7 @@ interfaze = ChatInterfaze(api_key=os.environ["INTERFAZE_API_KEY"])
 
 ### Already using the OpenAI SDK?
 
-Interfaze supports the Chat Completion API standard, so point an existing OpenAI client at it and pass `model: "interfaze-beta"` on every call.
+Interfaze supports the Chat Completion API standard, so point an existing OpenAI client at it and pass `model: "interfaze"` on every call.
 
 ```ts
 import OpenAI from "openai";
@@ -184,7 +184,7 @@ const IDSchema = z.object({
 });
 
 const { output, response } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   output: Output.object({ schema: IDSchema }),
   messages: [
     {
@@ -333,7 +333,7 @@ Drop the `response_format` / `output` argument when you only need raw text.
 import { generateText } from "ai";
 
 const { text } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   messages: [
     {
       role: "user",
@@ -388,7 +388,7 @@ console.log(result);
 import { generateText, Output } from "ai";
 
 const { output } = await generateText({
-  model: interfaze.chat("interfaze-beta"),
+  model: interfaze.chat("interfaze"),
   system: "<task>ocr</task>",
   output: Output.json(),
   messages: [
