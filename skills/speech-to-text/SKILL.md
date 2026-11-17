@@ -56,19 +56,14 @@ No base URL or model name to configure — both are built in.
 ### TypeScript — Vercel AI SDK
 
 ```bash
-npm install ai @ai-sdk/openai
+npm install ai @interfaze-ai/ai-sdk
 ```
 
 ```ts
-import { createOpenAI } from "@ai-sdk/openai";
-
-const interfaze = createOpenAI({
-  baseURL: "https://api.interfaze.ai/v1",
-  apiKey: process.env.INTERFAZE_API_KEY,
-});
+import { interfaze } from "@interfaze-ai/ai-sdk";
 ```
 
-Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`.
+Requires `ai@^7.0.0`. The default `interfaze` export reads `INTERFAZE_API_KEY`; base URL and model name are built in. To configure it yourself, use `createInterfaze({ apiKey })`.
 
 ### TypeScript — LangChain SDK
 
@@ -179,7 +174,7 @@ import { z } from "zod";
 
 const STTSchema = z.object({ text: z.string() });
 
-const { output, response } = await generateText({
+const { output, providerMetadata } = await generateText({
   model: interfaze.chat("interfaze"),
   output: Output.object({ schema: STTSchema }),
   messages: [
@@ -195,8 +190,8 @@ const { output, response } = await generateText({
 
 console.log(output);
 
-// @ts-expect-error precontext is not typed
-console.log("STT Results:", response.body?.precontext?.[0]?.result);
+const precontext = providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined;
+console.log("STT Results:", precontext?.[0]?.result);
 ```
 
 ### TypeScript — LangChain SDK
