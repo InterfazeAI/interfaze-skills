@@ -66,10 +66,10 @@ The base URL and model name are built in, and the client reads `INTERFAZE_API_KE
 | --- | --- | --- |
 | LangChain (TypeScript) | `@interfaze-ai/langchain` | `new ChatInterfaze()` |
 | LangChain (Python) | `interfaze-langchain` | `ChatInterfaze()` |
-| Vercel AI SDK | `ai` + `@ai-sdk/openai` | `createOpenAI({ baseURL, apiKey })` |
+| Vercel AI SDK | `ai` + `@interfaze-ai/ai-sdk` | `interfaze.chat("interfaze")` |
 | OpenAI SDK | `openai` | `new OpenAI({ baseURL, apiKey })` |
 
-The Vercel AI SDK and OpenAI SDK talk to Interfaze over the Chat Completion API standard, so they need the base URL `https://api.interfaze.ai/v1` and the model name `interfaze`. Each skill's `## Setup` section has the full snippet for every SDK.
+The OpenAI SDK talks to Interfaze over the Chat Completion API standard, so it needs the base URL `https://api.interfaze.ai/v1` and the model name `interfaze`. The Vercel AI SDK uses the native `@interfaze-ai/ai-sdk` provider, which has the base URL built in and exposes `precontext` on `providerMetadata.interfaze`. Each skill's `## Setup` section has the full snippet for every SDK.
 
 ## When to use AGENTS.md vs SKILL.md
 

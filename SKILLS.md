@@ -39,19 +39,14 @@ No base URL or model name to configure — both are built in.
 ### TypeScript — Vercel AI SDK
 
 ```bash
-npm install ai @ai-sdk/openai
+npm install ai @interfaze-ai/ai-sdk
 ```
 
 ```ts
-import { createOpenAI } from "@ai-sdk/openai";
-
-const interfaze = createOpenAI({
-  baseURL: "https://api.interfaze.ai/v1",
-  apiKey: process.env.INTERFAZE_API_KEY,
-});
+import { interfaze } from "@interfaze-ai/ai-sdk";
 ```
 
-Requires `ai@^7.0.0` and `@ai-sdk/openai@^4.0.0`.
+Requires `ai@^7.0.0`. The default `interfaze` export reads `INTERFAZE_API_KEY`; base URL and model name are built in. To configure it yourself, use `createInterfaze({ apiKey })`.
 
 ### TypeScript — LangChain SDK
 
@@ -195,7 +190,7 @@ const IDSchema = z.object({
   driver_licence_number: z.string().describe("Driver licence number on the ID"),
 });
 
-const { output, response } = await generateText({
+const { output, providerMetadata } = await generateText({
   model: interfaze.chat("interfaze"),
   output: Output.object({ schema: IDSchema }),
   messages: [
@@ -211,8 +206,8 @@ const { output, response } = await generateText({
 
 console.log(output);
 
-// @ts-expect-error precontext is not typed
-console.log("OCR Results:", response.body?.precontext?.[0]?.result);
+const precontext = providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined;
+console.log("OCR Results:", precontext?.[0]?.result);
 ```
 
 #### TypeScript — LangChain SDK
@@ -576,7 +571,7 @@ import { z } from "zod";
 
 const STTSchema = z.object({ text: z.string() });
 
-const { output, response } = await generateText({
+const { output, providerMetadata } = await generateText({
   model: interfaze.chat("interfaze"),
   output: Output.object({ schema: STTSchema }),
   messages: [
@@ -592,8 +587,8 @@ const { output, response } = await generateText({
 
 console.log(output);
 
-// @ts-expect-error precontext is not typed
-console.log("STT Results:", response.body?.precontext?.[0]?.result);
+const precontext = providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined;
+console.log("STT Results:", precontext?.[0]?.result);
 ```
 
 #### TypeScript — LangChain SDK
@@ -1096,9 +1091,8 @@ When Interfaze runs a task to answer the request — OCR, web search, transcript
 // Interfaze SDK
 response.precontext?.[0]?.result;
 
-// Vercel AI SDK — untyped, read off the raw body
-// @ts-expect-error precontext is not typed
-response.body?.precontext;
+// Vercel AI SDK (from generateText) — JSON-typed, so cast it
+(providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined);
 
 // LangChain SDK — requires includeRaw
 response.raw.response_metadata.precontext;
@@ -1231,7 +1225,7 @@ const DetectionSchema = z.object({
     .describe("any alphabetic characters text in the image"),
 });
 
-const { output, response } = await generateText({
+const { output, providerMetadata } = await generateText({
   model: interfaze.chat("interfaze"),
   output: Output.object({ schema: DetectionSchema }),
   messages: [
@@ -1247,8 +1241,8 @@ const { output, response } = await generateText({
 
 console.log(output);
 
-// @ts-expect-error precontext is not typed
-console.log("Object Detection Results:", response.body?.precontext?.[0]?.result);
+const precontext = providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined;
+console.log("Object Detection Results:", precontext?.[0]?.result);
 ```
 
 #### TypeScript — LangChain SDK
@@ -1591,15 +1585,15 @@ console.log("Web Search Results:", response.precontext?.[0]?.result);
 ```ts
 import { generateText } from "ai";
 
-const { text, response } = await generateText({
+const { text, providerMetadata } = await generateText({
   model: interfaze.chat("interfaze"),
   prompt: "Latest news on Nvidia",
 });
 
 console.log(text);
 
-// @ts-expect-error precontext is not typed
-console.log("Web Search Results:", response.body?.precontext?.[0]?.result);
+const precontext = providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined;
+console.log("Web Search Results:", precontext?.[0]?.result);
 ```
 
 #### TypeScript — LangChain SDK
@@ -1763,9 +1757,8 @@ Raw search hits are returned on the response's `precontext` array. Each hit has 
 // Interfaze SDK
 response.precontext?.[0]?.result;
 
-// Vercel AI SDK
-// @ts-expect-error precontext is not typed
-response.body?.precontext?.[0]?.result;
+// Vercel AI SDK (from generateText) — JSON-typed, so cast it
+(providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined)?.[0]?.result;
 
 // LangChain SDK
 response.response_metadata.precontext?.[0]?.result;
@@ -1929,7 +1922,7 @@ const ProductSchema = z.object({
   listing_name: z.string(),
 });
 
-const { output, response } = await generateText({
+const { output, providerMetadata } = await generateText({
   model: interfaze.chat("interfaze"),
   output: Output.object({ schema: ProductSchema }),
   prompt: "Extract the information from https://www.amazon.com/Nintendo-Switch-Neon-Blue-Joy-Con/dp/B0BFJWCYTL",
@@ -1937,8 +1930,8 @@ const { output, response } = await generateText({
 
 console.log(output);
 
-// @ts-expect-error precontext is not typed
-console.log("Web Scrape Results:", response.body?.precontext?.[0]?.result);
+const precontext = providerMetadata?.interfaze?.precontext as { result?: unknown }[] | undefined;
+console.log("Web Scrape Results:", precontext?.[0]?.result);
 ```
 
 #### TypeScript — LangChain SDK
