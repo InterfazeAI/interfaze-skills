@@ -6,7 +6,7 @@ Interfaze AI is a proprietary multimodal model with first-party SDKs for TypeScr
 
 - **Base URL:** `https://api.interfaze.ai/v1` (built into the first-party SDKs)
 - **Model:** `interfaze` (built into the first-party SDKs)
-- **Auth:** `Authorization: Bearer $INTERFAZE_API_KEY`
+- **Auth:** `Authorization: Bearer $INTERFAZE_API_KEY`. For keyless access from server-side code, leave out the header (see [Setup](#setup)).
 
 ## Contents
 
@@ -20,7 +20,9 @@ Interfaze AI is a proprietary multimodal model with first-party SDKs for TypeScr
 
 ## Setup
 
-The same client setup applies to every skill below. Every SDK reads the API key from `INTERFAZE_API_KEY`.
+The same client setup applies to every skill below. Every SDK reads the API key from `INTERFAZE_API_KEY`, and the SDK examples below need an API key. If `INTERFAZE_API_KEY` is unset, the Vercel AI SDK and OpenAI SDK clients read `OPENAI_API_KEY` instead and send it to Interfaze.
+
+To try Interfaze without an API key, send a direct API request from server-side code and leave out the `Authorization` header. Interfaze limits keyless requests from each IP address and does not accept them from a browser. See [Try Interfaze without an API key](https://interfaze.ai/docs#try-interfaze-without-an-api-key) and [keyless limits](https://interfaze.ai/docs/limits#keyless-access).
 
 ### TypeScript — Interfaze SDK
 
