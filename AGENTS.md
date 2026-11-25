@@ -7,7 +7,7 @@ This repo contains installable Agent Skills for Interfaze AI. Follow these rules
 - Interfaze AI is a proprietary multimodal model. It has first-party SDKs and also supports the Chat Completion API standard, so OpenAI-compatible clients work against its base URL.
 - API base URL: `https://api.interfaze.ai/v1`. Model name: `interfaze`. The first-party SDKs have both built in, so neither is configured when using them.
 - Interfaze supports the Chat Completion API standard, not the Responses API standard.
-- Require `INTERFAZE_API_KEY` as an environment variable in SDK examples. The first-party SDKs read it automatically. For keyless access, link the published docs and do not copy the curl command or quota numbers.
+- Require `INTERFAZE_API_KEY` as an environment variable in SDK examples. The first-party SDKs read it automatically. Keyless access is also supported for testing, but has daily limits. 
 - Only document how to use the API — inputs, outputs, and patterns.
 
 ## Supported SDKs and languages
