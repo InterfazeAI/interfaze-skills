@@ -39,7 +39,7 @@ npx skills add InterfazeAI/interfaze-skills --list
 
 ## Setup
 
-Set `INTERFAZE_API_KEY` in your environment, then install the SDK for your stack.
+To use an SDK, set `INTERFAZE_API_KEY` in your environment, then install the SDK for your stack. The SDKs need an API key.
 
 ```bash
 npm install interfaze          # TypeScript
@@ -69,7 +69,11 @@ The base URL and model name are built in, and the client reads `INTERFAZE_API_KE
 | Vercel AI SDK          | `ai` + `@ai-sdk/openai`   | `createOpenAI({ baseURL, apiKey })` |
 | OpenAI SDK             | `openai`                  | `new OpenAI({ baseURL, apiKey })`   |
 
-The Vercel AI SDK and OpenAI SDK talk to Interfaze over the Chat Completion API standard, so they need the base URL `https://api.interfaze.ai/v1` and the model name `interfaze`. Each skill's `## Setup` section has the full snippet for every SDK.
+The Vercel AI SDK and OpenAI SDK talk to Interfaze over the Chat Completion API standard, so they need the base URL `https://api.interfaze.ai/v1` and the model name `interfaze`. If `INTERFAZE_API_KEY` is unset, these clients read `OPENAI_API_KEY` instead and send it to Interfaze. Each skill's `## Setup` section has the full snippet for every SDK.
+
+### Try Interfaze without an API key
+
+You can call the API without an API key from server-side code. Send a direct API request and leave out the `Authorization` header. Interfaze limits keyless requests from each IP address and does not accept them from a browser. See [Try Interfaze without an API key](https://interfaze.ai/docs#try-interfaze-without-an-api-key) and [keyless limits](https://interfaze.ai/docs/limits#keyless-access).
 
 ## When to use AGENTS.md vs SKILL.md
 

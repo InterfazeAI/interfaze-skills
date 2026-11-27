@@ -44,7 +44,9 @@ Generate outputs into strict, schema-validated JSON using Zod (TypeScript) or Py
 
 ## Setup
 
-Every SDK reads the API key from `INTERFAZE_API_KEY`.
+Every SDK reads the API key from `INTERFAZE_API_KEY`, and the SDK examples below need an API key. If `INTERFAZE_API_KEY` is unset, the Vercel AI SDK and OpenAI SDK clients read `OPENAI_API_KEY` instead and send it to Interfaze.
+
+To try Interfaze without an API key, send a direct API request from server-side code and leave out the `Authorization` header. Interfaze limits keyless requests from each IP address and does not accept them from a browser. See [Try Interfaze without an API key](https://interfaze.ai/docs#try-interfaze-without-an-api-key) and [keyless limits](https://interfaze.ai/docs/limits#keyless-access).
 
 ### TypeScript — Interfaze SDK
 
