@@ -22,19 +22,19 @@ Interfaze AI is a proprietary multimodal AI model accessible through a chat-comp
 Install all skills:
 
 ```bash
-npx skills add JigsawStack/interfaze-skills
+npx skills add InterfazeAI/interfaze-skills
 ```
 
 Install a single skill:
 
 ```bash
-npx skills add JigsawStack/interfaze-skills --skill ocr
+npx skills add InterfazeAI/interfaze-skills --skill ocr
 ```
 
 List available skills without installing:
 
 ```bash
-npx skills add JigsawStack/interfaze-skills --list
+npx skills add InterfazeAI/interfaze-skills --list
 ```
 
 ## Setup
@@ -62,12 +62,12 @@ The base URL and model name are built in, and the client reads `INTERFAZE_API_KE
 
 ### Other SDKs
 
-| SDK | Package | Entry point |
-| --- | --- | --- |
-| LangChain (TypeScript) | `@interfaze-ai/langchain` | `new ChatInterfaze()` |
-| LangChain (Python) | `interfaze-langchain` | `ChatInterfaze()` |
-| Vercel AI SDK | `ai` + `@ai-sdk/openai` | `createOpenAI({ baseURL, apiKey })` |
-| OpenAI SDK | `openai` | `new OpenAI({ baseURL, apiKey })` |
+| SDK                    | Package                   | Entry point                         |
+| ---------------------- | ------------------------- | ----------------------------------- |
+| LangChain (TypeScript) | `@interfaze-ai/langchain` | `new ChatInterfaze()`               |
+| LangChain (Python)     | `interfaze-langchain`     | `ChatInterfaze()`                   |
+| Vercel AI SDK          | `ai` + `@ai-sdk/openai`   | `createOpenAI({ baseURL, apiKey })` |
+| OpenAI SDK             | `openai`                  | `new OpenAI({ baseURL, apiKey })`   |
 
 The Vercel AI SDK and OpenAI SDK talk to Interfaze over the Chat Completion API standard, so they need the base URL `https://api.interfaze.ai/v1` and the model name `interfaze`. Each skill's `## Setup` section has the full snippet for every SDK.
 
